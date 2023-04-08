@@ -3,9 +3,6 @@
 EventLoop::EventLoop()
 {
     m_poller_=std::make_unique<Poller>();
-    m_fake_socket_=std::make_unique<Socket>();
-    m_fake_socket_->creat();
-    m_poller_->updateFds(m_fake_socket_->fd());
 }
 
 EventLoop::~EventLoop()
@@ -30,7 +27,17 @@ void EventLoop::loop()
        {
         for(auto fd : sockets)
         {
-            m_read_callback_(fd);
+            if(fd==m_acceptor_->fd())
+            {
+                char buf[1024];
+                memset(buf, 0, sizeof(buf));
+                recv(m_acceptor_->fd(),buf,sizeof(buf),0);
+            }
+            else
+            {
+                 m_read_callback_(fd);
+            }
+           
         }
 
        }
@@ -42,11 +49,7 @@ void EventLoop::loop()
 void EventLoop::updateFds(SOCKET fd)
 {
     m_poller_->updateFds(fd);
-    if(m_fake_socket_)
-    {
-        const char * message="wake up";
-        send(m_fake_socket_->fd(),"wake up",strlen(message),0);
-    }
+    wakeup();
 }
 
 void EventLoop::set_connect_callback(std::function<void()> const &callback)
@@ -58,3 +61,38 @@ void EventLoop::set_connect_callback(std::function<void()> const &callback)
  {
     m_read_callback_=std::move(callback);
  }
+
+ void EventLoop:: set_pair()
+ {
+    auto listener=std::make_unique<Socket>();
+    listener->creat();
+    listener->bind("127.0.0.1",0);
+    listener->listen();
+    m_connector_=std::make_unique<Socket>();
+    m_connector_->creat();
+    std::string ip = "";
+	u_short port = 0;
+	auto tp=listener->get_addr();
+	std::tie(ip, port) = tp;
+    m_connector_->connect(ip.c_str(),port);
+    SOCKET clnt_fd=-1;
+    listener->accept(clnt_fd);
+    m_acceptor_=std::make_unique<Socket>();
+    m_acceptor_->set_fd(clnt_fd);
+    m_poller_->updateFds(m_acceptor_->fd());
+
+ }
+
+void EventLoop:: wakeup()
+{
+    if(m_connector_ && m_acceptor_)
+    {
+        const char * message="wake up";
+        auto s=send(m_connector_->fd(),"wake up",strlen(message),0);
+        if(s > 0)
+        {
+            
+        }
+    }
+
+}

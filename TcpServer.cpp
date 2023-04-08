@@ -10,14 +10,14 @@ TcpServer::TcpServer()
     std::function<void(int)> cb = std::bind(&TcpServer::newConnection, this, std::placeholders::_1);
     m_acceptor_->set_new_connection_callback(cb);
 
-    u_int size=3;
+    u_int size=1;
     m_thread_pool_= std::make_unique<ThreadPool>(size);
     for(u_int i = 0; i < size; ++i)
     {
         std::unique_ptr<EventLoop> sub_reactor = std::make_unique<EventLoop>();
         std::function<void(int)> cb = std::bind(&TcpServer::readHandle, this, std::placeholders::_1);
         sub_reactor->set_read_callback(cb);
-        sub_reactor->set_fake();
+        sub_reactor->set_pair();
         m_sub_reactors_.push_back(std::move(sub_reactor));
     }
 }

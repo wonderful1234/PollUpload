@@ -9,7 +9,8 @@ private:
     std::unique_ptr<Poller> m_poller_;
     std::function<void()> m_connect_callback_;
     std::function<void(int)> m_read_callback_;
-    std::unique_ptr<Socket> m_fake_socket_;
+    std::unique_ptr<Socket> m_connector_;
+    std::unique_ptr<Socket> m_acceptor_;
 public:
     EventLoop();
     ~EventLoop();
@@ -17,6 +18,8 @@ public:
     void updateFds(SOCKET fd);
     void set_connect_callback(std::function<void()> const &callback);
     void set_read_callback(std::function<void(int)> const &callback);
+    void set_pair();
+    void wakeup();
 
 
 };
